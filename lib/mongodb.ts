@@ -1,18 +1,28 @@
-import { MongoClient } from "mongodb";
+import { MongoClient, MongoClientOptions } from "mongodb";
 
 const uri = process.env.MONGODB_URI!;
-const options = {};
+const options: MongoClientOptions = {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+};
 
 let client: MongoClient;
 let clientPromise: Promise<MongoClient>;
 
+declare global {
+  // eslint-disable-next-line no-var
+  var _mongoClientPromise: Promise<MongoClient>;
+}
+
 if (process.env.NODE_ENV === "development") {
-  if (!(global as any)._mongoClientPromise) {
+  // In development mode, use a global variable to preserve the connection across module reloads
+  if (!global._mongoClientPromise) {
     client = new MongoClient(uri, options);
-    (global as any)._mongoClientPromise = client.connect();
+    global._mongoClientPromise = client.connect();
   }
-  clientPromise = (global as any)._mongoClientPromise;
+  clientPromise = global._mongoClientPromise;
 } else {
+  // In production mode, create a new connection
   client = new MongoClient(uri, options);
   clientPromise = client.connect();
 }

@@ -19,7 +19,9 @@ import {
   TrendingUp,
   Activity,
   AlertCircle,
-  CheckCircle
+  CheckCircle,
+  Menu,
+  X
 } from 'lucide-react';
 import { CourseManagement } from './CourseManagement';
 import { QuestionManagement } from './QuestionManagement';
@@ -30,6 +32,7 @@ import { Analytics } from './Analytics';
 
 export function AdminDashboard() {
   const [activeTab, setActiveTab] = useState('overview');
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
   const { data: session, status } = useSession();
   if (status === 'loading') return null;
   const user = session?.user;
@@ -98,27 +101,33 @@ export function AdminDashboard() {
     }
   };
 
+  const logout = () => {
+    signOut({ callbackUrl: '/' });
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 relative">
       {/* Header */}
       <header className="bg-white border-b sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4">
+        <div className="container mx-auto px-3 sm:px-4 py-3 sm:py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <div className="p-2 bg-primary rounded-lg">
-                <Shield className="h-6 w-6 text-white" />
+            <div className="flex items-center space-x-2 sm:space-x-4">
+              <div className="p-1.5 sm:p-2 bg-primary rounded-lg">
+                <Shield className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
               </div>
-              <div>
-                <h1 className="text-lg font-semibold">NDU Quiz Hub - Admin</h1>
-                <p className="text-sm text-muted-foreground">System Administration Panel</p>
+              <div className="max-w-[160px] sm:max-w-none">
+                <h1 className="text-base sm:text-lg font-semibold truncate">NDU Quiz Admin</h1>
+                <p className="text-xs sm:text-sm text-muted-foreground truncate">Admin Panel</p>
               </div>
             </div>
             
-            <div className="flex items-center space-x-4">
-              <nav className="flex space-x-1">
+            <div className="flex items-center space-x-2 sm:space-x-4">
+              {/* Desktop Navigation */}
+              <nav className="hidden md:flex space-x-1">
                 <Button
                   variant={activeTab === 'overview' ? 'default' : 'ghost'}
                   size="sm"
+                  className="text-xs sm:text-sm px-2 sm:px-3"
                   onClick={() => setActiveTab('overview')}
                 >
                   Overview
@@ -126,6 +135,7 @@ export function AdminDashboard() {
                 <Button
                   variant={activeTab === 'courses' ? 'default' : 'ghost'}
                   size="sm"
+                  className="text-xs sm:text-sm px-2 sm:px-3"
                   onClick={() => setActiveTab('courses')}
                 >
                   Courses
@@ -133,6 +143,7 @@ export function AdminDashboard() {
                 <Button
                   variant={activeTab === 'questions' ? 'default' : 'ghost'}
                   size="sm"
+                  className="text-xs sm:text-sm px-2 sm:px-3"
                   onClick={() => setActiveTab('questions')}
                 >
                   Questions
@@ -140,6 +151,7 @@ export function AdminDashboard() {
                 <Button
                   variant={activeTab === 'events' ? 'default' : 'ghost'}
                   size="sm"
+                  className="hidden lg:inline-flex text-xs sm:text-sm px-2 sm:px-3"
                   onClick={() => setActiveTab('events')}
                 >
                   Events
@@ -147,6 +159,7 @@ export function AdminDashboard() {
                 <Button
                   variant={activeTab === 'users' ? 'default' : 'ghost'}
                   size="sm"
+                  className="hidden lg:inline-flex text-xs sm:text-sm px-2 sm:px-3"
                   onClick={() => setActiveTab('users')}
                 >
                   Users
@@ -154,22 +167,99 @@ export function AdminDashboard() {
                 <Button
                   variant={activeTab === 'analytics' ? 'default' : 'ghost'}
                   size="sm"
+                  className="hidden lg:inline-flex text-xs sm:text-sm px-2 sm:px-3"
                   onClick={() => setActiveTab('analytics')}
                 >
                   Analytics
                 </Button>
-                <Button
-                  variant={activeTab === 'settings' ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => setActiveTab('settings')}
-                >
-                  Settings
-                </Button>
               </nav>
               
-              <Button variant="outline" size="sm" onClick={() => signOut({ callbackUrl: '/' })}>
-                <LogOut className="h-4 w-4 mr-2" />
-                Logout
+              {/* Mobile menu button */}
+              <div className="md:hidden">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="relative mobile-menu-button"
+                  onClick={() => setShowMobileMenu(!showMobileMenu)}
+                >
+                  {showMobileMenu ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+                </Button>
+                {showMobileMenu && (
+                  <div className="absolute right-2 mt-2 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-50">
+                    <div className="py-1">
+                      <button
+                        onClick={() => {
+                          setActiveTab('overview');
+                          setShowMobileMenu(false);
+                        }}
+                        className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      >
+                        Overview
+                      </button>
+                      <button
+                        onClick={() => {
+                          setActiveTab('courses');
+                          setShowMobileMenu(false);
+                        }}
+                        className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      >
+                        Courses
+                      </button>
+                      <button
+                        onClick={() => {
+                          setActiveTab('questions');
+                          setShowMobileMenu(false);
+                        }}
+                        className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      >
+                        Questions
+                      </button>
+                      <button
+                        onClick={() => {
+                          setActiveTab('events');
+                          setShowMobileMenu(false);
+                        }}
+                        className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      >
+                        Events
+                      </button>
+                      <button
+                        onClick={() => {
+                          setActiveTab('users');
+                          setShowMobileMenu(false);
+                        }}
+                        className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      >
+                        Users
+                      </button>
+                      <button
+                        onClick={() => {
+                          setActiveTab('analytics');
+                          setShowMobileMenu(false);
+                        }}
+                        className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      >
+                        Analytics
+                      </button>
+                      <button
+                        onClick={logout}
+                        className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 border-t border-gray-100"
+                      >
+                        Logout
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+              
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={logout}
+                className="hidden md:flex items-center"
+              >
+                <LogOut className="h-4 w-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">Logout</span>
               </Button>
             </div>
           </div>

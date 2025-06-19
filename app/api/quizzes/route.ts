@@ -16,7 +16,7 @@ export async function POST(request: Request) {
   if (!session?.user?.email) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
-  const { score, badges, course, duration } = await request.json();
+  const { score, badges, courseId, duration } = await request.json();
   const client = await clientPromise;
   const db = client.db();
   const user = await db.collection('users').findOne({ email: session.user.email });
@@ -28,17 +28,39 @@ export async function POST(request: Request) {
   const averageScore = Math.round((totalScore / quizzesCompleted) * 10) / 10;
   const updatedStats = { totalScore, quizzesCompleted, averageScore };
   const updatedBadges = Array.from(new Set([...(user.badges || []), ...badges]));
+  // Get course title for the activity
+  const course = await db.collection('courses').findOne(
+    { _id: new ObjectId(courseId) },
+    { projection: { title: 1 } }
+  );
+
   await db.collection('users').updateOne(
     { email: session.user.email },
     {
       $set: { ...updatedStats, badges: updatedBadges },
       $push: {
-        recentActivity: { course, score, date: new Date().toISOString(), duration }
+        recentActivity: { 
+          courseId, 
+          course: course?.title, // Include course title directly
+          score, 
+          date: new Date().toISOString(), 
+          duration 
+        }
       }
     }
   );
 
   // Increment student count for the course
-  await db.collection('courses').updateOne({ _id: new ObjectId(course) }, { $inc: { students: 1 } });
+  // Update course stats
+  await db.collection('courses').updateOne({ _id: new ObjectId(courseId) }, { $inc: { students: 1 } });
+  
+  // Store the quiz result with courseId as a string for consistency
+  await db.collection('quizzes').insertOne({
+    userId: user._id,
+    courseId: courseId, // Store as string to match courses collection
+    score,
+    date: new Date(),
+    duration
+  });
   return NextResponse.json({ ok: true, updated: { ...updatedStats, badges: updatedBadges } });
 }

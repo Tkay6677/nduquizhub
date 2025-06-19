@@ -11,7 +11,17 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
   const client = await clientPromise;
-  const users = await client.db().collection('users').find({}, { projection: { passwordHash: 0 } }).toArray();
+  const users = await client.db()
+    .collection('users')
+    .find(
+      {},
+      {
+        projection: { passwordHash: 0 },
+        sort: { createdAt: -1 },
+        limit: 100
+      }
+    )
+    .toArray();
   return NextResponse.json(users);
 }
 

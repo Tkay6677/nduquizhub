@@ -27,43 +27,37 @@ interface QuizPageProps {
 }
 
 export function QuizPage({ course, isTimedQuiz, showAnswersDuring, onBack }: QuizPageProps) {
-  const [questions] = useState<Question[]>([
-    {
-      id: 1,
-      question: "What is the time complexity of binary search?",
-      options: ["O(n)", "O(log n)", "O(n²)", "O(1)"],
-      correctAnswer: 1,
-      explanation: "Binary search divides the search space in half with each comparison, resulting in O(log n) time complexity."
-    },
-    {
-      id: 2,
-      question: "Which data structure uses LIFO (Last In, First Out) principle?",
-      options: ["Queue", "Stack", "Array", "Linked List"],
-      correctAnswer: 1,
-      explanation: "Stack follows the LIFO principle where the last element added is the first one to be removed."
-    },
-    {
-      id: 3,
-      question: "What is the main purpose of a constructor in OOP?",
-      options: ["To destroy objects", "To initialize objects", "To copy objects", "To compare objects"],
-      correctAnswer: 1,
-      explanation: "A constructor is used to initialize objects when they are created, setting up initial values and states."
-    },
-    {
-      id: 4,
-      question: "Which sorting algorithm has the best average-case time complexity?",
-      options: ["Bubble Sort", "Selection Sort", "Quick Sort", "Insertion Sort"],
-      correctAnswer: 2,
-      explanation: "Quick Sort has an average-case time complexity of O(n log n), which is optimal for comparison-based sorting."
-    },
-    {
-      id: 5,
-      question: "What does SQL stand for?",
-      options: ["Structured Query Language", "Simple Query Language", "System Query Language", "Standard Query Language"],
-      correctAnswer: 0,
-      explanation: "SQL stands for Structured Query Language, used for managing and querying relational databases."
-    }
-  ]);
+  const [questions, setQuestions] = useState<Question[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchQuestions = async () => {
+      try {
+        const res = await fetch(`/api/questions?courseCode=${encodeURIComponent(course.code)}`);
+        if (!res.ok) throw new Error();
+        const data = await res.json();
+        if (data.length === 0) {
+          toast.error('No questions found for this course');
+          onBack();
+          return;
+        }
+        // Map DB questions to local Question interface
+        setQuestions(data.map((q: any, idx: number) => ({
+          id: q._id || idx,
+          question: q.question,
+          options: q.options,
+          correctAnswer: typeof q.correctAnswer === 'number' ? q.correctAnswer : parseInt(q.correctAnswer),
+          explanation: q.explanation || ''
+        })));
+      } catch {
+        toast.error('Failed to load questions for this course');
+        onBack();
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchQuestions();
+  }, [course.code]);
 
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState<{ [key: number]: number }>({});
@@ -80,6 +74,25 @@ export function QuizPage({ course, isTimedQuiz, showAnswersDuring, onBack }: Qui
       handleSubmitQuiz();
     }
   }, [timeLeft, isTimedQuiz, isQuizCompleted]);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+
+  if (questions.length === 0) {
+    return (
+      <div className="text-center p-8">
+        <p className="text-lg mb-4">No questions available for this course.</p>
+        <Button onClick={onBack} variant="outline">
+          <ArrowLeft className="mr-2 h-4 w-4" /> Back to Course Selection
+        </Button>
+      </div>
+    );
+  }
 
   const currentQuestion = questions[currentQuestionIndex];
   const progress = ((currentQuestionIndex + 1) / questions.length) * 100;
@@ -115,28 +128,30 @@ export function QuizPage({ course, isTimedQuiz, showAnswersDuring, onBack }: Qui
 
   const handleSubmitQuiz = async () => {
     const score = calculateScore();
-    setIsQuizCompleted(true);
-    setShowResults(true);
-    
-    const badges: string[] = [];
-    if (score === 100) {
-      badges.push('Perfect Score');
-      toast.success('🏆 Perfect Score! You earned a Perfect Score badge!');
-    } else if (score >= 90) {
-      badges.push('Quiz Master');
-    } else if (score >= 80) {
-      badges.push('High Achiever');
-    }
+    const badges = [];
+    if (score >= 80) badges.push('Gold Medal');
+    else if (score >= 60) badges.push('Silver Medal');
+    else if (score >= 40) badges.push('Bronze Medal');
+
     try {
-      const res = await fetch('/api/quizzes', {
+      const response = await fetch('/api/quizzes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ score, badges, course: course.id, duration: course.timeLimit - Math.floor(timeLeft / 60) })
+        body: JSON.stringify({
+          score,
+          badges,
+          courseId: course._id || course.id, // Handle both _id and id formats
+          course: course.title, // Include course title directly
+          duration: Math.floor((course.timeLimit * 60 - timeLeft) / 60)
+        })
       });
-      if (!res.ok) throw new Error('Submission failed');
+      if (!response.ok) throw new Error('Submission failed');
       toast.success(`Quiz completed! Your score: ${score}%`);
     } catch (error) {
       toast.error('Error submitting results. Please try again.');
+    } finally {
+      setIsQuizCompleted(true);
+      setShowResults(true);
     }
   };
 
